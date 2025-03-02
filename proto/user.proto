@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package user;
+option go_package = "dd/pkg/user";
+
+service UserService {
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+  rpc GetProfile(GetProfileRequest) returns (GetProfileResponse);
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+}
+
+message User {
+  string id = 1;
+  string email = 2;
+  string created_at = 3;
+}
+
+message CreateUserRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message CreateUserResponse {
+  User user = 1;
+}
+
+message GetProfileRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message GetProfileResponse {
+  User user = 1;
+}
+
+message ListUsersRequest {
+  int32 page = 1;
+  int32 per_page = 2;
+}
+
+message ListUsersResponse {
+  repeated User users = 1;
+  int32 total = 2;
+} 

@@ -1,0 +1,76 @@
+version: '3'
+
+services:
+  proxy:
+    build:
+      context: .
+      dockerfile: ./proxy/Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - auth
+    networks:
+      - microservices
+
+  auth:
+    build:
+      context: .
+      dockerfile: ./auth/Dockerfile
+    ports:
+      - "50051:50051"
+    depends_on:
+      - user
+    networks:
+      - microservices
+
+  user:
+    build:
+      context: .
+      dockerfile: ./user/Dockerfile
+    ports:
+      - "50053:50053"
+    depends_on:
+      - postgres
+    networks:
+      - microservices
+
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: userdb
+      POSTGRES_INITDB_ARGS: "--extension=uuid-ossp"
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./user/migrations:/docker-entrypoint-initdb.d
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - microservices
+
+  geo:
+    build:
+      context: .
+      dockerfile: ./geo/Dockerfile
+    ports:
+      - "50052:50052"
+    depends_on:
+      - redis
+      - auth
+    networks:
+      - microservices
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - microservices
+
+networks:
+  microservices:
+    driver: bridge
+
+volumes:
+  postgres_data:

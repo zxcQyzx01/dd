@@ -10,6 +10,10 @@ import (
 
 	"github.com/gorilla/mux"
 	"google.golang.org/grpc"
+
+	_ "dd/docs" // импорт сгенерированной документации
+
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 func main() {
@@ -54,6 +58,11 @@ func main() {
 	// User routes
 	r.HandleFunc("/api/user/profile", h.GetProfile).Methods("GET")
 	r.HandleFunc("/api/user/list", h.ListUsers).Methods("GET")
+
+	// Swagger
+	r.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
+		httpSwagger.URL("http://localhost:8080/swagger/doc.json"),
+	))
 
 	// Запускаем сервер
 	log.Printf("Starting proxy server on :8080")

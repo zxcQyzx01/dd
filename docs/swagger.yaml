@@ -1,0 +1,301 @@
+definitions:
+  proxy_internal_handler.Address:
+    properties:
+      city:
+        example: Москва
+        type: string
+      house:
+        example: "1"
+        type: string
+      lat:
+        example: "55.7558"
+        type: string
+      lon:
+        example: "37.6173"
+        type: string
+      street:
+        example: Тверская
+        type: string
+    type: object
+  proxy_internal_handler.AuthResponse:
+    properties:
+      token:
+        example: eyJhbGciOiJIUzI1NiIs...
+        type: string
+    type: object
+  proxy_internal_handler.GeocodeRequest:
+    properties:
+      lat:
+        example: "55.7558"
+        type: string
+      lng:
+        example: "37.6173"
+        type: string
+    type: object
+  proxy_internal_handler.GeocodeResponse:
+    properties:
+      addresses:
+        items:
+          $ref: '#/definitions/proxy_internal_handler.Address'
+        type: array
+    type: object
+  proxy_internal_handler.ListUsersResponse:
+    properties:
+      total:
+        example: 42
+        type: integer
+      users:
+        items:
+          $ref: '#/definitions/proxy_internal_handler.ProfileResponse'
+        type: array
+    type: object
+  proxy_internal_handler.LoginRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      password:
+        example: password123
+        type: string
+    type: object
+  proxy_internal_handler.ProfileResponse:
+    properties:
+      created_at:
+        example: "2024-03-03T12:00:00Z"
+        type: string
+      email:
+        example: user@example.com
+        type: string
+      id:
+        example: "123"
+        type: string
+    type: object
+  proxy_internal_handler.RegisterRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      password:
+        example: password123
+        type: string
+    type: object
+  proxy_internal_handler.SearchAddressRequest:
+    properties:
+      query:
+        example: Москва, Тверская улица
+        type: string
+    type: object
+  proxy_internal_handler.SearchAddressResponse:
+    properties:
+      addresses:
+        items:
+          $ref: '#/definitions/proxy_internal_handler.Address'
+        type: array
+    type: object
+info:
+  contact: {}
+paths:
+  /address/geocode:
+    post:
+      consumes:
+      - application/json
+      description: Получение адреса по координатам
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Координаты
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/proxy_internal_handler.GeocodeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/proxy_internal_handler.GeocodeResponse'
+        "400":
+          description: Invalid request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      summary: Geocode coordinates
+      tags:
+      - geo
+  /address/search:
+    post:
+      consumes:
+      - application/json
+      description: Поиск адреса по строке
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Параметры поиска
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/proxy_internal_handler.SearchAddressRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/proxy_internal_handler.SearchAddressResponse'
+        "400":
+          description: Invalid request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      summary: Search address
+      tags:
+      - geo
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Аутентификация пользователя
+      parameters:
+      - description: Данные для входа
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/proxy_internal_handler.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/proxy_internal_handler.AuthResponse'
+        "400":
+          description: Invalid request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      summary: Login user
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Регистрация нового пользователя
+      parameters:
+      - description: Данные для регистрации
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/proxy_internal_handler.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/proxy_internal_handler.AuthResponse'
+        "400":
+          description: Invalid request
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Register user
+      tags:
+      - auth
+  /user/list:
+    get:
+      consumes:
+      - application/json
+      description: Получение списка пользователей
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - default: 1
+        description: Номер страницы
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Количество записей на странице
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/proxy_internal_handler.ListUsersResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      summary: List users
+      tags:
+      - user
+  /user/profile:
+    get:
+      consumes:
+      - application/json
+      description: Получение профиля пользователя
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Email пользователя
+        in: query
+        name: email
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/proxy_internal_handler.ProfileResponse'
+        "400":
+          description: Invalid request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: User not found
+          schema:
+            type: string
+      summary: Get user profile
+      tags:
+      - user
+swagger: "2.0"

@@ -1,14 +1,15 @@
 package main
 
 import (
-	"dd/geo/internal/config"
-	"dd/geo/internal/service"
-	pb "dd/pkg/geo"
 	"log"
 	"net"
 
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
+
+	"dd/geo/internal/config"
+	"dd/geo/internal/service"
+	pb "dd/pkg/geo"
 )
 
 func main() {

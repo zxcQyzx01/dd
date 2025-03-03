@@ -2,9 +2,6 @@ package service
 
 import (
 	"context"
-	"dd/geo/internal/dadata"
-	pb_auth "dd/pkg/auth"
-	pb "dd/pkg/geo"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -15,6 +12,11 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+
+	"dd/geo/internal/dadata"
+	"dd/geo/internal/domain"
+	pb_auth "dd/pkg/auth"
+	pb "dd/pkg/geo"
 )
 
 const (
@@ -27,7 +29,7 @@ type GeoService struct {
 	pb.UnimplementedGeoServiceServer
 	authClient  pb_auth.AuthServiceClient
 	redisClient *redis.Client
-	geoProvider *dadata.Provider
+	geoProvider domain.GeoProvider
 }
 
 func New(authConn *grpc.ClientConn, redisClient *redis.Client) *GeoService {

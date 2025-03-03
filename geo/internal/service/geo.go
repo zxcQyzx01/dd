@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -56,17 +57,24 @@ func (s *GeoService) validateToken(ctx context.Context) error {
 		return status.Error(codes.Unauthenticated, "no token provided")
 	}
 
+	// Удаляем префикс "Bearer " и логируем
+	token := strings.TrimPrefix(tokens[0], "Bearer ")
+	log.Printf("Validating token: %s", token)
+
 	resp, err := s.authClient.ValidateToken(ctx, &pb_auth.ValidateTokenRequest{
-		Token: tokens[0],
+		Token: token,
 	})
 	if err != nil {
+		log.Printf("Token validation error: %v", err)
 		return status.Error(codes.Unauthenticated, "invalid token")
 	}
 
 	if !resp.Valid {
+		log.Printf("Token is not valid")
 		return status.Error(codes.Unauthenticated, "token is not valid")
 	}
 
+	log.Printf("Token is valid for user: %s", resp.UserId)
 	return nil
 }
 

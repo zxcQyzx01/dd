@@ -11,6 +11,8 @@ import (
 	"google.golang.org/grpc"
 
 	"fmt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type AuthService struct {
@@ -27,28 +29,29 @@ func New(userConn *grpc.ClientConn, jwtSecret string) *AuthService {
 }
 
 func (s *AuthService) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
-	// Проверяем входные данные
-	if req.Email == "" || req.Password == "" {
-		return nil, fmt.Errorf("email and password are required")
+	// Проверяем существование пользователя
+	_, err := s.userClient.GetProfile(ctx, &userpb.GetProfileRequest{
+		Email: req.Email,
+	})
+	if err == nil {
+		return nil, status.Errorf(codes.AlreadyExists, "user already exists")
 	}
 
-	// Создаем пользователя через user service
+	// Создаем пользователя
 	userResp, err := s.userClient.CreateUser(ctx, &userpb.CreateUserRequest{
 		Email:    req.Email,
 		Password: req.Password,
 	})
 	if err != nil {
-		log.Printf("Failed to check user existence: %v", err)
-		return nil, fmt.Errorf("failed to create user: %v", err)
-	}
-
-	token, err := s.generateToken(userResp.User.Id)
-	if err != nil {
-		log.Printf("Failed to generate token: %v", err)
+		log.Printf("Failed to create user: %v", err)
 		return nil, err
 	}
 
-	log.Printf("Generated token for user %s", req.Email)
+	// Генерируем токен
+	token, err := s.generateToken(userResp.User.Id)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to generate token: %v", err)
+	}
 
 	return &pb.RegisterResponse{
 		Token: token,

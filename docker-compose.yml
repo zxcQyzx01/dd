@@ -1,38 +1,107 @@
 version: '3'
 
 services:
-  proxy:
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./logs:/var/log/nginx
+    depends_on:
+      - proxy1
+    networks:
+      - microservices
+    restart: unless-stopped
+
+  # Proxy Service (HTTP to gRPC)
+  proxy1: &proxy-service
     build:
       context: .
       dockerfile: ./proxy/Dockerfile
+    environment:
+      AUTH_SERVICE: "auth1:50051"
+      GEO_SERVICE: "geo1:50052"
+      USER_SERVICE: "user1:50053"
+      HTTP_PORT: ":8000"
     ports:
-      - "8080:8080"
-    depends_on:
-      - auth
+      - "8000"
     networks:
       - microservices
+    depends_on:
+      - auth1
+      - geo1
+      - user1
 
-  auth:
+  # Auth Service Replicas
+  auth1: &auth-service
     build:
       context: .
       dockerfile: ./auth/Dockerfile
-    ports:
-      - "50051:50051"
-    depends_on:
-      - user
+    environment:
+      USER_SERVICE: "user1:50053"
+      JWT_SECRET: "your-secret-key"
     networks:
       - microservices
+    depends_on:
+      user1:
+        condition: service_healthy
+    restart: unless-stopped
+  auth2:
+    <<: *auth-service
+  auth3:
+    <<: *auth-service
 
-  user:
+  # Geo Service Replicas
+  geo1: &geo-service
+    build:
+      context: .
+      dockerfile: ./geo/Dockerfile
+    environment:
+      REDIS_ADDR: "redis:6379"
+      JWT_SECRET: "your-secret-key"
+      AUTH_SERVICE: "auth1:50051"
+    networks:
+      - microservices
+    depends_on:
+      redis:
+        condition: service_started
+      auth1:
+        condition: service_started
+    restart: unless-stopped
+  geo2:
+    <<: *geo-service
+  geo3:
+    <<: *geo-service
+
+  # User Service Replicas
+  user1: &user-service
     build:
       context: .
       dockerfile: ./user/Dockerfile
-    ports:
-      - "50053:50053"
-    depends_on:
-      - postgres
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: userdb
+      GRPC_PORT: ":50053"
     networks:
       - microservices
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "nc", "-z", "localhost", "50053" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+  user2:
+    <<: *user-service
+  user3:
+    <<: *user-service
 
   postgres:
     image: postgres:13
@@ -41,36 +110,36 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: userdb
       POSTGRES_INITDB_ARGS: "--extension=uuid-ossp"
-    ports:
-      - "5432:5432"
     volumes:
       - ./user/migrations:/docker-entrypoint-initdb.d
       - postgres_data:/var/lib/postgresql/data
     networks:
       - microservices
-
-  geo:
-    build:
-      context: .
-      dockerfile: ./geo/Dockerfile
-    ports:
-      - "50052:50052"
-    depends_on:
-      - redis
-      - auth
-    networks:
-      - microservices
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
 
   redis:
     image: redis:alpine
-    ports:
-      - "6379:6379"
     networks:
       - microservices
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
 
 networks:
   microservices:
     driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
 
 volumes:
   postgres_data:

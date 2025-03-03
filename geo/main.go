@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net"
+	"os"
 
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
@@ -15,16 +16,28 @@ import (
 func main() {
 	cfg := config.New()
 
+	// Получаем адрес auth сервиса из переменной окружения
+	authHost := os.Getenv("AUTH_SERVICE")
+	if authHost == "" {
+		authHost = "auth1:50051" // значение по умолчанию
+	}
+
 	// Подключаемся к auth сервису
-	authConn, err := grpc.Dial("auth:50051", grpc.WithInsecure())
+	authConn, err := grpc.Dial(authHost, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("failed to connect to auth service: %v", err)
 	}
 	defer authConn.Close()
 
+	// Получаем адрес Redis из переменной окружения
+	redisAddr := os.Getenv("REDIS_ADDR")
+	if redisAddr == "" {
+		redisAddr = "redis:6379"
+	}
+
 	// Подключаемся к Redis
 	redisClient := redis.NewClient(&redis.Options{
-		Addr: "redis:6379",
+		Addr: redisAddr,
 	})
 
 	// Создаем gRPC сервер

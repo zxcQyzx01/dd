@@ -12,8 +12,8 @@ import (
 func main() {
     cfg := config.New()
 
-    // Подключаемся к сервису пользователей
-    userConn, err := grpc.Dial(cfg.UserService, grpc.WithInsecure())
+    // Подключаемся к user сервису
+    userConn, err := grpc.Dial("user1:50053", grpc.WithInsecure(), grpc.WithBlock())
     if err != nil {
         log.Fatalf("failed to connect to user service: %v", err)
     }

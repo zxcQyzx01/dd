@@ -7,6 +7,7 @@ import (
 	"dd/proxy/internal/handler"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/mux"
 	"google.golang.org/grpc"
@@ -18,19 +19,19 @@ import (
 
 func main() {
 	// Подключаемся к микросервисам
-	authConn, err := grpc.Dial("auth:50051", grpc.WithInsecure(), grpc.WithBlock())
+	authConn, err := grpc.Dial("auth1:50051", grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		log.Fatalf("failed to connect to auth service: %v", err)
 	}
 	defer authConn.Close()
 
-	geoConn, err := grpc.Dial("geo:50052", grpc.WithInsecure(), grpc.WithBlock())
+	geoConn, err := grpc.Dial("geo1:50052", grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		log.Fatalf("failed to connect to geo service: %v", err)
 	}
 	defer geoConn.Close()
 
-	userConn, err := grpc.Dial("user:50053", grpc.WithInsecure(), grpc.WithBlock())
+	userConn, err := grpc.Dial("user1:50053", grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		log.Fatalf("failed to connect to user service: %v", err)
 	}
@@ -64,9 +65,18 @@ func main() {
 		httpSwagger.URL("http://localhost:8080/swagger/doc.json"),
 	))
 
-	// Запускаем сервер
-	log.Printf("Starting proxy server on :8080")
-	if err := http.ListenAndServe(":8080", r); err != nil {
+	// Убедимся, что используется правильный порт
+	httpPort := os.Getenv("HTTP_PORT")
+	if httpPort == "" {
+		httpPort = ":8000"
+	}
+
+	log.Printf("Starting proxy server on %s", httpPort)
+	server := &http.Server{
+		Addr:    httpPort,
+		Handler: r,
+	}
+	if err := server.ListenAndServe(); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
 }
